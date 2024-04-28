@@ -1,7 +1,7 @@
 import sqlite3
 
 # Replace 'your_database_file.db' with the path to your actual SQLite database file.
-DATABASE_FILE = 'instance/database.db'
+DATABASE_FILE = 'instance/database1.db'
 
 def get_top_servers(top_x):
     # Connect to the SQLite database

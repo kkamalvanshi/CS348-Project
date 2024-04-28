@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 from datetime import datetime
-
+import matplotlib.pyplot as plt
 # Base URL of your Flask app
 BASE_URL = "http://127.0.0.1:5000"
 
@@ -42,14 +42,15 @@ def delete_data(endpoint, item_id):
     return response.status_code == 200
 # Sidebar for navigation
 st.sidebar.title("Navigation")
-options = ["Models","Datasets", "Versions", "Servers", "Deployments", "Deployment Reports", "Top Servers Report", "Model Types Count"]
+options = ["Models","Datasets", "Versions", "Servers", "Deployments", "Deployment Reports", "Top Servers Report", "Model Types Count", "Top Datasets", "Top Models Report", "Dataset By Models", "Server Deployments"]
 choice = st.sidebar.radio("Choose an option", options)
 
 if choice == "Models":
-    st.subheader('Model Management')
+    st.subheader('Add a Model')
 
     # Add Model
     with st.form("add_model"):
+        
         name = st.text_input("Model Name")
         description = st.text_area("Model Description")
         model_type = st.selectbox("Model Type", ["LLM", "Regression", "Neural Network", "Other"])  # Added dropdown for model type
@@ -64,7 +65,23 @@ if choice == "Models":
                 st.success("Model added successfully")
             else:
                 st.error("Failed to add model")
-
+    st.subheader('Update Existing Model')
+    models = get_data('models')
+    model_id = st.selectbox("Select Model", [model['id'] for model in models], format_func=lambda x: f"ID {x}: {next(item['name'] for item in models if item['id'] == x)}")
+    if model_id:
+        selected_model = next((item for item in models if item['id'] == model_id), None)
+        if selected_model:
+            with st.form("update_model"):
+                new_name = st.text_input("Model Name", value=selected_model['name'])
+                new_description = st.text_area("Model Description", value=selected_model['description'])
+                new_type = st.selectbox("Model Type", ["LLM", "Regression", "Neural Network", "Other"], index=["LLM", "Regression", "Neural Network", "Other"].index(selected_model['type']))
+                submit_button = st.form_submit_button("Update Model")
+                if submit_button:
+                    model_update_data = {'name': new_name, 'description': new_description, 'type': new_type}
+                    if update_data('models/' + str(model_id), model_update_data) == 200:
+                        st.success("Model updated successfully")
+                    else:
+                        st.error("Failed to update model")
 
     # List Models
     models = get_data('models')
@@ -80,7 +97,7 @@ if choice == "Models":
                 st.error(f"Failed to delete model {model['id']}")
 
 elif choice == "Datasets":
-    st.subheader('Dataset Management')
+    st.subheader('Add Dataset')
 
     # Add Dataset Form
     with st.form("add_dataset"):
@@ -93,6 +110,24 @@ elif choice == "Datasets":
                 st.success("Dataset added successfully")
             else:
                 st.error("Failed to add dataset")
+
+    st.subheader('Update Existing Dataset')
+    datasets = get_data('datasets')
+    dataset_id = st.selectbox("Select Dataset", [dataset['id'] for dataset in datasets], format_func=lambda x: f"ID {x}: {next(item['name'] for item in datasets if item['id'] == x)}")
+    if dataset_id:
+        selected_dataset = next((item for item in datasets if item['id'] == dataset_id), None)
+        if selected_dataset:
+            with st.form("update_dataset"):
+                new_name = st.text_input("Dataset Name", value=selected_dataset['name'])
+                new_description = st.text_area("Dataset Description", value=selected_dataset['description'])
+                new_data_type = st.selectbox("Data Type", ["text", "image", "video", "audio"], index=["text", "image", "video", "audio"].index(selected_dataset['data_type']))
+                submit_button = st.form_submit_button("Update Dataset")
+                if submit_button:
+                    dataset_update_data = {'name': new_name, 'description': new_description, 'data_type': new_data_type}
+                    if update_data('datasets/' + str(dataset_id), dataset_update_data) == 200:
+                        st.success("Dataset updated successfully")
+                    else:
+                        st.error("Failed to update dataset")
 
     # List Datasets
     datasets = get_data('datasets')
@@ -107,7 +142,7 @@ elif choice == "Datasets":
     # Update and other operations go here
 
 elif choice == "Versions":
-    st.subheader('Version Management')
+    st.subheader('Add Version')
 
     # Add Version Form
     with st.form("add_version"):
@@ -121,7 +156,29 @@ elif choice == "Versions":
                 st.success("Version added successfully")
             else:
                 st.error("Failed to add version")
-
+    st.subheader('Update Existing Version')
+    versions = get_data('versions')
+    version_id = st.selectbox("Select Version", [version['id'] for version in versions], format_func=lambda x: f"ID {x}: Model ID {next(item['model_id'] for item in versions if item['id'] == x)}")
+    if version_id:
+        selected_version = next((item for item in versions if item['id'] == version_id), None)
+        if selected_version:
+            with st.form("update_version"):
+                new_model_id = st.number_input("Model ID", value=selected_version['model_id'], step=1)
+                new_dataset_id = st.number_input("Dataset ID", value=selected_version['dataset_id'], step=1)
+                new_version_number = st.text_input("Version Number", value=selected_version['version_number'])
+                new_performance_metrics = st.text_area("Performance Metrics", value=selected_version['performance_metrics'])
+                submit_button = st.form_submit_button("Update Version")
+                if submit_button:
+                    version_update_data = {
+                        'model_id': new_model_id,
+                        'dataset_id': new_dataset_id,
+                        'version_number': new_version_number,
+                        'performance_metrics': new_performance_metrics
+                    }
+                    if update_data('versions/' + str(version_id), version_update_data) == 200:
+                        st.success("Version updated successfully")
+                    else:
+                        st.error("Failed to update version")
     # List Versions
     versions = get_data('versions')
     for version in versions:
@@ -136,7 +193,7 @@ elif choice == "Versions":
 
 
 elif choice == "Servers":
-    st.subheader('Server Management')
+    st.subheader('Add Servers')
 
     # Add Server Form
     with st.form("add_server"):
@@ -149,6 +206,22 @@ elif choice == "Servers":
             else:
                 st.error("Failed to add server")
 
+    st.subheader('Update Existing Server')
+    servers = get_data('servers')
+    server_id = st.selectbox("Select Server", [server['id'] for server in servers], format_func=lambda x: f"ID {x}: {next(item['name'] for item in servers if item['id'] == x)}")
+    if server_id:
+        selected_server = next((item for item in servers if item['id'] == server_id), None)
+        if selected_server:
+            with st.form("update_server"):
+                new_name = st.text_input("Server Name", value=selected_server['name'])
+                new_ip_address = st.text_input("IP Address", value=selected_server['ip_address'])
+                submit_button = st.form_submit_button("Update Server")
+                if submit_button:
+                    new_server_data = {'name': new_name, 'ip_address': new_ip_address}
+                    if update_data('servers/' + str(server_id), new_server_data) == 200:
+                        st.success("Server updated successfully")
+                    else:
+                        st.error("Failed to update server")
     # List Servers
     servers = get_data('servers')
     for server in servers:
@@ -215,7 +288,8 @@ elif choice == "Deployment Reports":
 
         if report_data:
             st.write("Deployments Matching Criteria:")
-            for deployment in report_data["deployments"]:
+            #for deployment in report_data["deployments"]:
+            for deployment in report_data:
                 st.write(deployment)
     
         else:
@@ -227,10 +301,19 @@ elif choice == "Top Servers Report":
         top_servers = get_data("reports/top-servers", params={"top": top_x})
         if top_servers:
             for server in top_servers:
-                st.text(f"Server Name: {server['server_name']} - Deployments Count: {server['deployments_count']}")
+                st.text(f"Server Name: {server['server_name']} - Server Id: {server['server_id']} - Deployments Count: {server['deployment_count']}")
         else:
             st.error("Failed to fetch top servers report.")
-
+elif choice == "Top Models Report":
+        st.subheader("Top Models Deploying the Most")
+        top_x = st.number_input("Enter number of top models to fetch", min_value=1, value=5)
+        if st.button("Show Top Models"):
+            top_models = get_data("reports/top-models", params={"top": top_x})
+            if top_models:
+                for model in top_models:
+                    st.text(f"Model Name: {model['model_name']} - Model Id: {model['model_id']} - Deployments Count: {model['deployment_count']}")
+            else:
+                st.error("Failed to fetch top models report.")
 
 elif choice == "Update Model":
     st.subheader("Update an Existing Model")
@@ -271,8 +354,71 @@ elif choice == "Model Types Count":
     model_types_count = get_data("reports/model-types-count")
 
     if model_types_count:
-        # Displaying each model type with its deployment count
+
         for item in model_types_count:
-            st.write(f"Model Type: {item['type']} - Deployments: {item['count']}")
+            st.write(f"Model Type: {item['model_type']} - Deployments: {item['deployment_count']}")
+        types = [item['model_type'] for item in model_types_count]
+        counts = [item['deployment_count'] for item in model_types_count]
+
+        # Create a pie chart
+        fig, ax = plt.subplots()
+        ax.pie(counts, labels=types, autopct='%1.1f%%', startangle=90)
+        ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+
+        st.pyplot(fig)  # Display the figure in the Streamlit app
+        # Displaying each model type with its deployment count
+        
     else:
         st.write("No data found.")
+elif choice == "Top Datasets":
+    st.subheader("Top Datasets by Number of Versions")
+    top_x = st.number_input("Enter number of top datasets to fetch", min_value=1, value=5)
+    if st.button("Show Top Datasets"):
+        top_datasets = get_data("reports/top-datasets", params={"top": top_x})
+        if top_datasets:
+            for dataset in top_datasets:
+                st.text(f"Dataset Name: {dataset['dataset_name']} - Dataset Id: {dataset['dataset_id']} - Versions Count: {dataset['version_count']}")
+        else:
+            st.error("Failed to fetch top datasets report.")
+elif choice == "Dataset By Models":
+    
+    # Fetch datasets for dropdown
+    datasets = get_data('datasets/list')
+    dataset_names = {dataset['dataset_name']: dataset['dataset_id'] for dataset in datasets} if datasets else {}
+
+    st.subheader("Select a Dataset to View Models")
+    dataset_choice = st.selectbox("Choose Dataset", options=list(dataset_names.keys()))
+
+    if dataset_choice:
+        dataset_id = dataset_names[dataset_choice]
+        models = get_data('models/by-dataset', params={'dataset_id': dataset_id})
+        
+        if models:
+            for model in models:
+                st.write(f"**Model Name:** {model['model_name']} (ID: {model['model_id']})")
+                st.write(f"**Description:** {model['model_description']}")
+                st.write(f"**Deployments Count:** {model['deployment_count']}")
+                st.write("------")
+        else:
+            st.error("No models found for the selected dataset.")
+
+if choice == "Server Deployments":
+        st.subheader('Deployment Reports by Server')
+
+        start_date = st.number_input("Start Date (MMDD)", min_value=101, max_value=1231, step=1, format='%d')
+        end_date = st.number_input("End Date (MMDD)", min_value=101, max_value=1231, step=1, format='%d')
+        
+        #model_type_options = ["All"] + [model['type'] for model in get_data('models/list-types')]
+        #selected_model_type = st.selectbox("Model Type", model_type_options)
+
+        if st.button("Generate Report"):
+            params = {"start_date": start_date, "end_date": end_date}
+
+            report_data = get_data('reports/server-deployments', params=params)
+
+            if report_data:
+                st.write("Deployments Matching Criteria:")
+                for deployment in report_data:
+                    st.write(f"Server Name: {deployment['server_name']} - Server ID: {deployment['server_id']} - Deployments Count: {deployment['deployment_count']}")
+            else:
+                st.error("Failed to fetch report.")
